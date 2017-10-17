@@ -5,28 +5,8 @@ from scipy import stats
 from scipy.special import gammaln, xlogy, logsumexp
 from genICD import *
 
-def f_case1(U, nm_excl_i):
-    return ((2.**U)*(nm_excl_i+U))**-1
 
-
-def d2f_case1(U, nm_excl_i):
-    return 2.**(1-U)/(nm_excl_i+U)**3 + (2**-U)*np.log(2)**2/(nm_excl_i+U) + 2**(1-U)*np.log(2)/(nm_excl_i+U)**2
-
-
-def f_case3(X, Ystar, Ydagger, nm_excl_i):
-    return Ydagger / ( 2.**(X+Ystar+Ydagger) * (nm_excl_i+X+Ystar+Ydagger) )
-
-
-def d2f_dYstar2_case3(X, Ystar, Ydagger, nm_excl_i):
-    U = X+Ystar+Ydagger
-    return Ydagger*d2f_case1(U, nm_excl_i)
-
-
-def d2f_dYdagger2_case3(X, Ystar, Ydagger, nm_excl_i):
-    U = X+Ystar+Ydagger
-    return ( Ydagger*2.**(1-U) / (nm_excl_i+U)**3
-            + (Ydagger*(2**-U)*np.log(2)**2 - np.log(2)*2**(1-U)) / (nm_excl_i+U) 
-            - 2*(2**-U - Ydagger*np.log(2)*2**-U) / (nm_excl_i+U)**2 )
+# extension of collapsed Gibbs sampler from S. Williamson, C. Wang, K. A. Heller and D. M. Blei. The IBP-compound Dirichlet process and its application to focused topic modeling. ICML, 2010
 
 
 # vectorized over k, returns vector with p_zmi for k=0,...,K-1
@@ -71,12 +51,36 @@ def E_g_X_Y(n_per_mk_excl_i, m, i, z, phi, pi, alpha, gamma):
     return mask1*case1 + mask2*case2 + mask3*case3
 
 
+def f_case1(U, nm_excl_i):
+    return ((2.**U)*(nm_excl_i+U))**-1
+
+
+def d2f_case1(U, nm_excl_i):
+    return 2.**(1-U)/(nm_excl_i+U)**3 + (2**-U)*np.log(2)**2/(nm_excl_i+U) + 2**(1-U)*np.log(2)/(nm_excl_i+U)**2
+
+
+def f_case3(X, Ystar, Ydagger, nm_excl_i):
+    return Ydagger / ( 2.**(X+Ystar+Ydagger) * (nm_excl_i+X+Ystar+Ydagger) )
+
+
+def d2f_dYstar2_case3(X, Ystar, Ydagger, nm_excl_i):
+    U = X+Ystar+Ydagger
+    return Ydagger*d2f_case1(U, nm_excl_i)
+
+
+def d2f_dYdagger2_case3(X, Ystar, Ydagger, nm_excl_i):
+    U = X+Ystar+Ydagger
+    return ( Ydagger*2.**(1-U) / (nm_excl_i+U)**3
+            + (Ydagger*(2**-U)*np.log(2)**2 - np.log(2)*2**(1-U)) / (nm_excl_i+U) 
+            - 2*(2**-U - Ydagger*np.log(2)*2**-U) / (nm_excl_i+U)**2 )
+
+
 def draw_via_PIT(logpdf,args,lb,ub,Npoints):
     # calc pdf for region of interest & normalize -> distribution for region of interest
     points = np.linspace(lb,ub,Npoints)
     logpdf_approx = logpdf(points,*args)
     logpdf_approx = logpdf_approx - logpdf_approx.max()
-    logc = logsumexp(logpdf_approx)  # normalizing constant, sp.integrate.quad(p_new_pi,0,1,args=(alpha_sample,N))
+    logc = logsumexp(logpdf_approx)  # normalizing constant, 
     logpdf_approx_norm = logpdf_approx - logc
     cdf_approx = np.cumsum(np.exp(logpdf_approx_norm))
     cdf_approx_unique, idx = np.unique(cdf_approx, return_index=True)
@@ -89,7 +93,7 @@ def draw_via_PIT(logpdf,args,lb,ub,Npoints):
     stepsize = (ub-ub)/float(Npoints)
     sample = sample + np.random.uniform(-stepsize/2.,stepsize/2.)
     
-    return sample #,cdf_approx_unique, points_unique
+    return sample
 
 
 def logp_new_pi(pi, alpha, N):
@@ -242,7 +246,6 @@ def sICD_collapsed_gibbs(iters, w, Nvocab, alpha, gamma, eta, z0, phi0, pi0, b0,
         loglikelihood = np.sum(stats.multinomial.logpmf(n_per_ik.T, n=n_per_ik.sum(axis=0), p=beta_postmean.T))
         loglikelihoods.append(loglikelihood)
         bs.append(b.copy())
-        # ?easier way to copy the whole list including sublists (I tried: list(z), import copy, copy.copy(z), z as list of list instead of list of arrays)
         zs.append([z_m.copy() for z_m in z])
         phis.append(phi.copy())
         pis.append(pi.copy())

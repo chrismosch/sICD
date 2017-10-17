@@ -3,6 +3,8 @@ import pandas as pd
 from collections import Counter
 
 
+# notation similar to S. Williamson, C. Wang, K. A. Heller and D. M. Blei. The IBP-compound Dirichlet process and its application to focused topic modeling. ICML, 2010
+
 def IBP_stick_breaking(alpha, N, K):
     mu = np.random.beta(alpha,1,size=K)
     pi = np.cumprod(mu)
@@ -19,7 +21,6 @@ def FTM_synthetic_data(M, K, Nvocab, gamma, alpha, eta, supervised=False, mu_a=0
         b = np.random.binomial(n=1, p=pi, size=(M,K))
         if np.all(b.dot(phi)>0):  # negative_binomial requires parameter n>0
             break
-    # error for small m (since small m -> some obs have no active features)
     while True:
         n = np.random.negative_binomial(b.dot(phi),0.5)
         if np.all(n>0):  # ignore draws where some documents consist of 0 words (alternatively: drop those cases)
